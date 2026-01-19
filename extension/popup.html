@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+  <style>
+    body {
+      width: 350px;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+    }
+    h1 {
+      font-size: 18px;
+      margin: 0 0 15px 0;
+      color: #333;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .status.info {
+      background-color: #e3f2fd;
+      color: #1976d2;
+    }
+    .status.success {
+      background-color: #e8f5e9;
+      color: #388e3c;
+    }
+    .status.error {
+      background-color: #ffebee;
+      color: #c62828;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: #2962ff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover {
+      background-color: #1e88e5;
+    }
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    button.stop {
+      background-color: #f44336;
+    }
+    button.stop:hover {
+      background-color: #d32f2f;
+    }
+    .info-text {
+      font-size: 12px;
+      color: #666;
+      margin-top: 10px;
+    }
+    #niftyPrice {
+      font-weight: bold;
+      color: #2962ff;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Nifty Options Screenshot</h1>
+  <div id="status" class="status info">
+    Ready to capture options screenshots
+  </div>
+  <div id="niftyInfo" style="display: none;">
+    <p>Current Nifty Price: <span id="niftyPrice">-</span></p>
+    <p>Will capture: 5 ITM CE + 5 ITM PE = 10 screenshots</p>
+  </div>
+  <button id="captureBtn">Capture Options Screenshots</button>
+  <button id="stopBtn" class="stop" style="display: none;">Stop Capture</button>
+  
+  <div id="apiConfig" style="display: none; margin-top: 15px; padding: 15px; background: #f5f5f5; border-radius: 4px; border: 1px solid #ddd;">
+    <h3 style="font-size: 14px; margin: 0 0 10px 0; color: #333;">API Configuration</h3>
+    <div style="margin-bottom: 10px;">
+      <label style="display: block; font-size: 12px; margin-bottom: 5px; color: #666;">API Key:</label>
+      <input type="text" id="apiKey" placeholder="API Key" value="3ngsjp3dclif0m3o" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; box-sizing: border-box;">
+    </div>
+    <div style="margin-bottom: 10px;">
+      <label style="display: block; font-size: 12px; margin-bottom: 5px; color: #666;">API Secret:</label>
+      <input type="password" id="apiSecret" placeholder="API Secret" value="p60rabo57qehlcvezoxmalev9i0k4tvb" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; box-sizing: border-box;">
+    </div>
+    <div style="margin-bottom: 10px;">
+      <button id="loginBtn" style="width: 100%; padding: 10px; margin-bottom: 10px; background: #2962ff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">
+        🔐 Login to Kite (Auto-extract Token)
+      </button>
+      <label style="display: block; font-size: 12px; margin-bottom: 5px; color: #666;">Request Token (from login):</label>
+      <input type="text" id="requestToken" placeholder="Will be auto-filled after login" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; box-sizing: border-box;">
+      <div style="font-size: 11px; color: #666; margin-top: 5px;">
+        Or get manually from: <a href="https://kite.zerodha.com/connect/login?v=3&api_key=3ngsjp3dclif0m3o" target="_blank" style="color: #2962ff;">Kite Login</a>
+      </div>
+    </div>
+    <button id="saveAPICreds" style="width: 100%; padding: 10px; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold;">Save & Generate Access Token</button>
+    <div id="apiStatus" style="margin-top: 10px; font-size: 12px; padding: 8px; border-radius: 4px; display: none;"></div>
+  </div>
+  
+  <button id="showAPIConfig" style="width: 100%; padding: 8px; margin-top: 10px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Configure API</button>
+  
+  <div class="info-text">
+    Make sure you're on Zerodha Kite page with Nifty chart visible
+  </div>
+</body>
+<script src="api.js"></script>
+<script src="popup.js"></script>
+</html>
+
