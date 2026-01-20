@@ -138,7 +138,12 @@ async function main() {
     
     // Step 5: Initialize browser
     console.log('Initializing browser...');
-    const browser = await initBrowser(config.browserType, config.headless);
+    const browser = await initBrowser(
+      config.browserType,
+      config.headless,
+      config.useExistingChrome,
+      config.chromeCDPEndpoint
+    );
     const page = await browser.newPage();
     
     // Step 6: Login if credentials provided

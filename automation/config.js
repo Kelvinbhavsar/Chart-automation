@@ -25,6 +25,8 @@ export const config = {
   // Browser settings
   headless: process.env.HEADLESS !== 'false', // Run in headless mode
   browserType: 'chromium', // 'chromium', 'firefox', or 'webkit'
+  useExistingChrome: process.env.USE_EXISTING_CHROME === 'true', // Connect to existing Chrome via CDP
+  chromeCDPEndpoint: process.env.CHROME_CDP_ENDPOINT || 'http://localhost:9222', // Chrome DevTools Protocol endpoint
   
   // Kite login (optional - if access_token not provided)
   kiteUsername: process.env.KITE_USERNAME || null,

@@ -1,7 +1,6 @@
 // Kite Connect API functions
 
 import { createHash } from 'crypto';
-import { gunzipSync } from 'zlib';
 
 const KITE_API_BASE = 'https://api.kite.trade';
 
@@ -203,34 +202,24 @@ export async function fetchNFOInstruments(accessToken, apiKey) {
     throw new Error(errorMessage);
   }
   
-  // Check if response is gzipped
+  // Node.js fetch() automatically decompresses gzip responses
+  // The content-encoding header indicates the server sent it gzipped,
+  // but fetch has already decompressed it by the time we read the body
+  // So we can just use response.text() directly
+  
   const contentType = response.headers.get('content-type') || '';
   const contentEncoding = response.headers.get('content-encoding') || '';
-  const isGzipped = contentEncoding.includes('gzip') || contentType.includes('gzip');
   
   // #region agent log
-  fetch('http://127.0.0.1:7244/ingest/6676a7ca-b2e5-4a74-983d-8b91ff876270',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'kite-api.js:128',message:'Before decompression check',data:{contentType,contentEncoding,isGzipped},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+  fetch('http://127.0.0.1:7244/ingest/6676a7ca-b2e5-4a74-983d-8b91ff876270',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'kite-api.js:207',message:'Before reading response',data:{contentType,contentEncoding,note:'fetch() auto-decompresses gzip'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
   // #endregion
   
-  let text;
-  if (isGzipped) {
-    // Response is gzipped, decompress it
-    const buffer = await response.arrayBuffer();
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/6676a7ca-b2e5-4a74-983d-8b91ff876270',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'kite-api.js:133',message:'Before gzip decompression',data:{bufferSize:buffer.byteLength},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
-    const decompressed = gunzipSync(Buffer.from(buffer));
-    text = decompressed.toString('utf-8');
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/6676a7ca-b2e5-4a74-983d-8b91ff876270',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'kite-api.js:136',message:'After gzip decompression',data:{decompressedLength:text.length,textPrefix:text.substring(0,100)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
-  } else {
-    // Plain text response
-    text = await response.text();
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/6676a7ca-b2e5-4a74-983d-8b91ff876270',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'kite-api.js:140',message:'Plain text response',data:{textLength:text.length,textPrefix:text.substring(0,100)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
-  }
+  // Use response.text() - fetch() handles gzip decompression automatically
+  const text = await response.text();
+  
+  // #region agent log
+  fetch('http://127.0.0.1:7244/ingest/6676a7ca-b2e5-4a74-983d-8b91ff876270',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'kite-api.js:215',message:'Response text read',data:{textLength:text.length,textPrefix:text.substring(0,100),contentEncoding},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+  // #endregion
   
   const instruments = parseInstrumentsCSV(text);
   
@@ -272,24 +261,136 @@ export function findInstrumentToken(instruments, underlying, strike, type, expir
   const upperType = type.toUpperCase();
   const upperUnderlying = underlying.toUpperCase();
   
+  // #region agent log
+  // Find sample NIFTY instruments to see what types exist
+  const sampleNifty = instruments.filter(inst => {
+    const symbol = (inst.tradingsymbol || '').toUpperCase();
+    return symbol.includes('NIFTY');
+  }).slice(0, 20);
+  
+  // Check what instrument_type values exist for NIFTY
+  const instrumentTypes = [...new Set(sampleNifty.map(i => i.instrument_type))];
+  const sampleWithCE = sampleNifty.filter(i => {
+    const symbol = (i.tradingsymbol || '').toUpperCase();
+    return symbol.includes('CE') || symbol.includes('PE');
+  }).slice(0, 5);
+  
+  console.log('[DEBUG] Sample NIFTY instruments (first 20):', sampleNifty.map(i => ({
+    tradingsymbol: i.tradingsymbol,
+    strike: i.strike,
+    expiry: i.expiry,
+    instrument_type: i.instrument_type
+  })));
+  console.log('[DEBUG] Unique instrument_type values for NIFTY:', instrumentTypes);
+  console.log('[DEBUG] Sample NIFTY with CE/PE:', sampleWithCE.map(i => ({
+    tradingsymbol: i.tradingsymbol,
+    strike: i.strike,
+    expiry: i.expiry,
+    instrument_type: i.instrument_type
+  })));
+  
+  fetch('http://127.0.0.1:7244/ingest/6676a7ca-b2e5-4a74-983d-8b91ff876270',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'kite-api.js:264',message:'Sample NIFTY instruments analysis',data:{sampleCount:sampleNifty.length,instrumentTypes,sampleWithCE:sampleWithCE.map(i=>({tradingsymbol:i.tradingsymbol,strike:i.strike,expiry:i.expiry,instrument_type:i.instrument_type}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+  // #endregion
+  
   const matches = instruments.filter(inst => {
     const symbol = (inst.tradingsymbol || inst.name || '').toUpperCase();
     const instStrike = parseFloat(inst.strike) || 0;
     const instType = (inst.instrument_type || '').toUpperCase();
+    const instExpiry = inst.expiry || '';
     
-    if (instType !== 'OPT') return false;
-    if (!symbol.includes(upperUnderlying)) return false;
-    if (Math.abs(instStrike - strike) >= 1) return false;
-    
+    // Options are identified by having CE or PE in symbol, not necessarily instrument_type === 'OPT'
+    // Check for CE/PE in symbol first
     const hasCE = symbol.includes('CE') || symbol.includes('CALL');
     const hasPE = symbol.includes('PE') || symbol.includes('PUT');
+    
+    // #region agent log - detailed matching for first few instruments
+    if (symbol.includes(upperUnderlying) && (hasCE || hasPE) && Math.abs(instStrike - strike) < 100) {
+      fetch('http://127.0.0.1:7244/ingest/6676a7ca-b2e5-4a74-983d-8b91ff876270',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'kite-api.js:302',message:'Checking instrument match',data:{symbol,instStrike,strike,instType,instExpiry,expiry:expiry?.toString(),strikeMatch:Math.abs(instStrike - strike) < 1,hasCE,hasPE},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    }
+    // #endregion
+    
+    // Filter: Must be an option (has CE or PE in symbol) OR instrument_type is OPT/CE/PE
+    const isOption = hasCE || hasPE || instType === 'OPT' || instType === 'CE' || instType === 'PE' || instType === 'CALL' || instType === 'PUT';
+    if (!isOption) return false;
+    
+    if (!symbol.includes(upperUnderlying)) return false;
+    if (Math.abs(instStrike - strike) >= 1) return false;
     
     if (upperType === 'CE' && !hasCE) return false;
     if (upperType === 'PE' && !hasPE) return false;
     
-    if (expiry && symbol.includes(expiry.toString())) return true;
+    // Check expiry match - expiry is in YYMMDD format (e.g., 260122)
+    // But CSV expiry is in YYYY-MM-DD format (e.g., 2026-01-22)
+    if (expiry) {
+      const expiryStr = expiry.toString(); // e.g., "260122"
+      // Convert YYMMDD to YYYY-MM-DD for matching
+      const year = '20' + expiryStr.substring(0, 2); // "26" -> "2026"
+      const month = expiryStr.substring(2, 4); // "01"
+      const day = expiryStr.substring(4, 6); // "22"
+      const expiryDateStr = `${year}-${month}-${day}`; // "2026-01-22"
+      
+      // Match against expiry field (YYYY-MM-DD format)
+      if (instExpiry === expiryDateStr || instExpiry.includes(expiryDateStr)) {
+        return true;
+      }
+      
+      // Also try matching YYMMDD in symbol (e.g., "NIFTY26JAN24950CE")
+      if (symbol.includes(expiryStr)) {
+        return true;
+      }
+      
+      // Try matching month abbreviation (e.g., "26JAN" for January)
+      const monthNames = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+      const monthIndex = parseInt(month) - 1;
+      if (monthIndex >= 0 && monthIndex < 12) {
+        const monthAbbr = monthNames[monthIndex];
+        const yearShort = expiryStr.substring(0, 2);
+        if (symbol.includes(yearShort + monthAbbr) || symbol.includes(monthAbbr + yearShort)) {
+          return true;
+        }
+      }
+      
+      // If expiry is provided but doesn't match, exclude this instrument
+      return false;
+    }
+    
+    // If no expiry specified, match any expiry
     return true;
   });
+  
+  // If no matches found with expiry, try without expiry requirement
+  if (matches.length === 0 && expiry) {
+    console.log(`[DEBUG] No matches with expiry ${expiry}, trying without expiry filter...`);
+    const matchesWithoutExpiry = instruments.filter(inst => {
+      const symbol = (inst.tradingsymbol || inst.name || '').toUpperCase();
+      const instStrike = parseFloat(inst.strike) || 0;
+      const instType = (inst.instrument_type || '').toUpperCase();
+      
+      // Options are identified by CE/PE in symbol, not just instrument_type
+      const hasCE = symbol.includes('CE') || symbol.includes('CALL');
+      const hasPE = symbol.includes('PE') || symbol.includes('PUT');
+      const isOption = hasCE || hasPE || instType === 'OPT' || instType === 'CE' || instType === 'PE';
+      if (!isOption) return false;
+      if (!symbol.includes(upperUnderlying)) return false;
+      if (Math.abs(instStrike - strike) >= 1) return false;
+      
+      if (upperType === 'CE' && !hasCE) return false;
+      if (upperType === 'PE' && !hasPE) return false;
+      
+      return true;
+    });
+    
+    if (matchesWithoutExpiry.length > 0) {
+      console.log(`[DEBUG] Found ${matchesWithoutExpiry.length} matches without expiry filter`);
+      console.log(`[DEBUG] Sample matches:`, matchesWithoutExpiry.slice(0, 3).map(i => ({
+        tradingsymbol: i.tradingsymbol,
+        strike: i.strike,
+        expiry: i.expiry
+      })));
+      // Return the first match (or could return closest expiry)
+      return matchesWithoutExpiry[0];
+    }
+  }
   
   if (expiry && matches.length > 1) {
     const expiryMatch = matches.find(inst => {

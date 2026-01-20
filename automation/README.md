@@ -70,6 +70,58 @@ API_KEY=xxx API_SECRET=xxx ACCESS_TOKEN=xxx node index.js
 API_KEY=xxx API_SECRET=xxx REQUEST_TOKEN=xxx node index.js
 ```
 
+### Using Existing Chrome Browser (Recommended)
+
+To reuse your existing Chrome browser session (where you're already logged in):
+
+**Step 1: Start Chrome with Remote Debugging**
+
+**Option A: Use the helper script (Easiest)**
+```bash
+./start-chrome-debug.sh
+```
+
+**Option B: Manual command**
+
+**macOS:**
+```bash
+/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --remote-debugging-port=9222 --user-data-dir="$HOME/Library/Application Support/Google/Chrome"
+```
+
+**Windows:**
+```bash
+"C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222 --user-data-dir="%LOCALAPPDATA%\Google\Chrome\User Data"
+```
+
+**Linux:**
+```bash
+google-chrome --remote-debugging-port=9222 --user-data-dir="$HOME/.config/google-chrome"
+```
+
+**Note:** Close all existing Chrome windows before starting with remote debugging. The helper script will check for this automatically.
+
+**Step 2: Log in to Kite in the Chrome window**
+- Navigate to https://kite.zerodha.com
+- Log in manually
+- Keep Chrome running
+
+**Step 3: Run the automation script**
+```bash
+USE_EXISTING_CHROME=true node index.js
+```
+
+**Benefits:**
+- No need to log in for each chart
+- Reuses existing Chrome session and cookies
+- Can see the browser window (not headless)
+- Faster execution (no login delays)
+
+**Note:** 
+- Chrome must be started with `--remote-debugging-port=9222` before running the script
+- Only one Chrome instance can use the debugging port at a time
+- If Chrome is not running with remote debugging, the script will automatically fall back to launching a new browser instance
+- The helper script (`start-chrome-debug.sh`) uses your existing Chrome profile, so all your bookmarks, extensions, and login sessions are preserved
+
 ## Configuration
 
 Edit `config.js` to customize:
@@ -80,6 +132,8 @@ Edit `config.js` to customize:
 - `outputDir`: Screenshot output directory
 - `headless`: Run browser in headless mode
 - `chartTheme`: 'dark' or 'light'
+- `useExistingChrome`: Connect to existing Chrome via CDP (set `USE_EXISTING_CHROME=true`)
+- `chromeCDPEndpoint`: Chrome DevTools Protocol endpoint (default: `http://localhost:9222`)
 
 ## Output
 
@@ -111,8 +165,14 @@ automation/
 - Run `npx playwright install` to download browsers
 
 ### Login Required
-- If charts require login, set `KITE_USERNAME`, `KITE_PASSWORD`, and `KITE_PIN` in config
+- **Recommended:** Use existing Chrome browser with `USE_EXISTING_CHROME=true` (see Usage section above)
+- Or set `KITE_USERNAME`, `KITE_PASSWORD`, and `KITE_PIN` in config for automated login
 - Or manually login in browser before running (if headless=false)
+
+### Chrome Connection Failed
+- Make sure Chrome is running with `--remote-debugging-port=9222`
+- Check that no other Chrome instance is using port 9222
+- Verify the CDP endpoint URL matches your Chrome setup
 
 ### Token Not Found
 - Ensure instrument exists for the strike/expiry
